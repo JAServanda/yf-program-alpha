@@ -1,8 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { isEmailAllowed } from "./allowed-emails";
+import { getRoleForEmail, isEmailAllowed } from "./users";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -20,14 +21,20 @@ export const authOptions: NextAuthOptions = {
       return isEmailAllowed(user.email);
     },
     async session({ session, token }) {
-      if (session.user && token.email) {
-        session.user.email = token.email;
+      if (session.user) {
+        if (token.email) {
+          session.user.email = token.email;
+        }
+        if (token.role) {
+          session.user.role = token.role;
+        }
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user?.email) {
         token.email = user.email;
+        token.role = getRoleForEmail(user.email) ?? undefined;
       }
       return token;
     },
